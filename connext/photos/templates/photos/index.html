@@ -1,0 +1,16 @@
+{% extends 'photos/base.html' %}
+{% load static %}
+{% block title %}{{ photo.description }}{% endblock %}
+{% block content %}
+<body>
+{% if photos %}
+    <ul>
+    {% for photo in photos %}
+        <li><a href="{% url 'photos:photo' photo.id %}">{{ photo.description }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No polls are available.</p>
+{% endif %}
+</body>
+{% endblock %}

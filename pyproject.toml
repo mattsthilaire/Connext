@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "connext"
+version = "0.1.0"
+description = ""
+authors = ["MattStHilaire"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = "^5.1.1"
+pillow = "^10.4.0"
+boto3 = "^1.35.34"
+django-storages = "^1.14.4"
+python-dotenv = "^1.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

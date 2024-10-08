@@ -1,0 +1,16 @@
+{% extends 'photos/base.html' %}
+{% block title %}{{ photo.description }}{% endblock %}
+{% block content %}
+<body>
+    <h1>{{ photo.description }}</h1>
+    <img src="{{ photo.image.url }}" alt="{{ photo.description }}">
+    <form action="{% url 'photos:photo' photo.id %}" method="post">
+    {% csrf_token %}
+        {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+        <button type="submit" name="action" value="like">Like</button>
+<button type="submit" name="action" value="dislike">Dislike</button>
+    </form>
+    <p>Likes: {{ photo.likes }}</p>
+    <p>Dislikes: {{ photo.dislikes }}</p>
+</body>
+{% endblock %}
