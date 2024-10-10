@@ -1,16 +1,18 @@
 {% extends 'photos/base.html' %}
 {% load static %}
-{% block title %}{{ photo.description }}{% endblock %}
+{% block title %}Photo Gallery{% endblock %}
 {% block content %}
-<body>
-{% if photos %}
-    <ul>
-    {% for photo in photos %}
-        <li><a href="{% url 'photos:photo' photo.id %}">{{ photo.description }}</a></li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>No polls are available.</p>
-{% endif %}
-</body>
+<div class="photo-grid">
+    {% if photos %}
+        {% for photo in photos %}
+            <div class="photo-item">
+                <a href="{% url 'photos:photo' photo.id %}">
+                    <img src="{{ photo.image.url }}" alt="{{ photo.description }}">
+                </a>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No photos are available.</p>
+    {% endif %}
+</div>
 {% endblock %}

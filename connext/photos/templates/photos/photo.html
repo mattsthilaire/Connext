@@ -2,15 +2,19 @@
 {% block title %}{{ photo.description }}{% endblock %}
 {% block content %}
 <body>
-    <h1>{{ photo.description }}</h1>
     <img src="{{ photo.image.url }}" alt="{{ photo.description }}">
+    <p>{{ photo.description }}</p>
     <form action="{% url 'photos:photo' photo.id %}" method="post">
     {% csrf_token %}
         {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
         <button type="submit" name="action" value="like">Like</button>
-<button type="submit" name="action" value="dislike">Dislike</button>
+        <button type="submit" name="action" value="dislike">Dislike</button>
+        <button type="submit" name="action" value="generate_caption">Generate Caption!</button>
     </form>
     <p>Likes: {{ photo.likes }}</p>
     <p>Dislikes: {{ photo.dislikes }}</p>
+    {% if caption %}
+        <p>Generated Caption: {{ caption }}</p>
+    {% endif %}
 </body>
 {% endblock %}

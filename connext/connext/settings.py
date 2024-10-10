@@ -129,6 +129,9 @@ AWS_S3_OBJECT_PARAMETERS = {
     "CacheControl": "max-age=86400",
 }
 
+RUNPOD_IMAGE_CAPTIONING_URL = os.environ.get("RUNPOD_IMAGE_CAPTIONING_URL")
+RUNDPOD_API_KEY = os.environ.get("RUNDPOD_API_KEY")
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
