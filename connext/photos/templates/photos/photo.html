@@ -3,6 +3,8 @@
 {% block content %}
 <body>
     <img src="{{ photo.image.url }}" alt="{{ photo.description }}">
+    <br>
+    <a href="{% url 'photos:user' user_id %}">{{ photo.user }}</a>
     <p>{{ photo.description }}</p>
     <form action="{% url 'photos:photo' photo.id %}" method="post">
     {% csrf_token %}

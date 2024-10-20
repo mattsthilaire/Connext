@@ -1,0 +1,21 @@
+{% extends 'photos/base.html' %}
+{% load static %}
+
+{% block content %}
+<h2>Search Results for: "{{ query }}"</h2>
+<div class="photo-grid">
+    {% if photos %}
+        {% for photo in photos %}
+            <div class="photo-item">
+                <a href="{% url 'photos:photo' photo.id %}">
+                    <img src="{{ photo.image.url }}" alt="{{ photo.description }}">
+                </a>
+                <p>{{ photo.description }}</p>
+                <p>{{ photo.image_url }}</p>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No results.</p>
+    {% endif %}
+</div>
+{% endblock %}

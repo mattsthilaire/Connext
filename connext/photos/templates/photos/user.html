@@ -1,0 +1,19 @@
+{% extends 'photos/base.html' %}
+{% load static %}
+{% block title %}User Photo Gallery{% endblock %}
+{% block content %}
+<h1>{{ user.username }}'s Photo Gallery</h1>
+<div class="photo-grid">
+    {% if photos %}
+        {% for photo in photos %}
+            <div class="photo-item">
+                <a href="{% url 'photos:photo' photo.id %}">
+                    <img src="{{ photo.image.url }}" alt="{{ photo.description }}">
+                </a>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No photos are available.</p>
+    {% endif %}
+</div>
+{% endblock %}

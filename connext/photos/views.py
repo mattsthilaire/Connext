@@ -1,9 +1,10 @@
 import base64
 import requests
 import io
+import string
 
 from django.conf import settings
-from django.db.models import F
+from django.db.models import F, Q
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.shortcuts import get_object_or_404, render
@@ -11,9 +12,13 @@ from django.urls import reverse
 from django.views import generic
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.utils.decorators import method_decorator
+from django.contrib.auth import get_user_model
 from .models import Photo
+from django.contrib.auth.models import User
 
-#@login_not_required
+from .utils.search_utils import tokenize
+
+@login_not_required
 class IndexView(generic.ListView):
     template_name = "photos/index.html"
     context_object_name = "photos"
@@ -32,6 +37,7 @@ class DetailView(generic.DetailView):
 
 def photo(request, photo_id):
     photo = get_object_or_404(Photo, pk=photo_id)
+    user_id = User.objects.get(username=photo.user).id # get User ID for linking user page
     caption = None
     
     if request.method == "POST":
@@ -50,9 +56,20 @@ def photo(request, photo_id):
     
     context = {
         "photo": photo,
+        "user_id": user_id,
         "caption": caption,
     }
     return render(request, "photos/photo.html", context)
+
+def user_photos(request, user_id):
+    user = get_user_model()
+    user = get_object_or_404(user, pk=user_id)
+    user_photos = Photo.objects.filter(user_id=user_id).order_by("-created_at")
+    context = {
+        "photos": user_photos,
+        "user": user,
+    }
+    return render(request, "photos/user.html", context)
 
 def generate_caption(image_url):
     
@@ -66,7 +83,7 @@ def generate_caption(image_url):
     encoded_string = base64.b64encode(resp.content).decode("utf-8")
         
     resp = requests.post(
-        api_url, 
+        api_url,
         json={"input": {"image": encoded_string}},
         headers={"Authorization": api_key},)
     
@@ -74,3 +91,23 @@ def generate_caption(image_url):
         return resp.json()["output"]["caption"]
     else:
         return "Failed to generate caption"
+    
+def search(request):
+    query = request.GET.get("query")
+    query_tokens = tokenize(query)
+    
+    query_filters = Q()
+    
+    if query:
+        for token in query_tokens:
+            query_filters |= Q(description__icontains=token)
+        photos = Photo.objects.filter(query_filters).distinct()
+    else:
+        photos = Photo.objects.none()
+        
+    context = {
+        "photos": photos,
+        "query": query,
+    }
+    
+    return render(request, "photos/search.html", context)

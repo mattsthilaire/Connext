@@ -47,6 +47,7 @@ class PhotoViewTests(TestCase):
 
     def test_photo_like_increment(self):
         # Ensure the photo starts with 0 likes
+        print(self.photo.likes)
         self.assertEqual(self.photo.likes, 0)
 
         # Simulate a POST request to like the photo
@@ -76,3 +77,17 @@ class PhotoViewTests(TestCase):
 
         # Check that the likes have been incremented
         self.assertEqual(self.photo.dislikes, 1)
+        
+    def test_user_page(self):
+        url = reverse("photos:user", args=[self.user.id])
+        
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        self.assertTemplateUsed(response=response, template_name="photos/user.html")
+        
+        photos_in_context = response.context["photos"]
+        self.assertEqual(set(photos_in_context),
+                         set(Photo.objects.filter(user=self.user)))
+        

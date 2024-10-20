@@ -40,9 +40,11 @@
 <body>
     <nav class="navbar">
         <a href="{% url 'photos:index' %}">Home</a>
-        <!-- Add more navigation items here later -->
+        <form action="{% url 'photos:search' %}" method="GET">
+            <input type="text" name="query" placeholder="Search Image...">
+            <button type="submit">Search</button>
+        </form>
     </nav>
-
     <main>
         {% block content %}
         {% endblock %}
