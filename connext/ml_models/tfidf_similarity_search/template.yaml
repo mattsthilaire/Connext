@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Similarity Search Lambda Function with API Key Authentication
+
+
+Resources:
+  # API Gateway definition with auth configuration
+  SimilaritySearchApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        ApiKeyRequired: true  # Require API key for all methods
+      Cors:
+        AllowMethods: "'POST'"
+        AllowHeaders: "'Content-Type,X-Api-Key'"  # Include X-Api-Key in CORS
+        AllowOrigin: "'*'"
+
+   # The Lambda Function with secure API integration
+  SimilaritySearchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      ImageUri: similarity-search:latest
+      Environment:
+        Variables:
+          BUCKET: !Ref BUCKET
+          EMBEDDING_KEY: models/tfidf_components/tfidf_embedding.joblib
+          VECTORIZER_KEY: models/tfidf_components/tfidf_vectorizer.joblib
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref SimilaritySearchApi  # Link to our secured API
+            Path: /search
+            Method: post
+            Auth:
+              ApiKeyRequired: true  # Require API key for this endpoint
+
+  # Create an API Key
+  SimilaritySearchApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn: SimilaritySearchApi  # Ensure API exists first
+    Properties:
+      Name: SimilaritySearchKey
+      Description: API Key for Similarity Search
+      Enabled: true
+      StageKeys:
+        - RestApiId: !Ref SimilaritySearchApi
+          StageName: Prod
+
+  # Create a Usage Plan
+  SimilaritySearchUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: SimilaritySearchUsagePlan
+      Description: Usage Plan for Similarity Search API
+      ApiStages:
+        - ApiId: !Ref SimilaritySearchApi
+          Stage: Prod
+      Quota:
+        Limit: 100000        # Number of requests allowed
+        Period: MONTH      # Time period for quota
+      Throttle:
+        RateLimit: 10      # Requests per second
+        BurstLimit: 20     # Maximum burst size
+
+  # Associate API Key with Usage Plan
+  SimilaritySearchUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref SimilaritySearchApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref SimilaritySearchUsagePlan
+
+Parameters:
+  BUCKET:
+    Type: String
+    Default: bombastic-mediocrity-connext
+    Description: Name of the S3 bucket containing the models
+
+Outputs:
+  ApiEndpoint:
+      Description: "API Gateway endpoint URL"
+      Value: !Sub "https://${SimilaritySearchApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/text_search/"
+  
+  ApiKeyId:
+    Description: "API Key ID"
+    Value: !Ref SimilaritySearchApiKey
+    
+  UsagePlanId:
+    Description: "Usage Plan ID"
+    Value: !Ref SimilaritySearchUsagePlan
+
+  SimilaritySearchApi:
+    Description: "API Gateway endpoint URL for Similarity Search function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/text_search/"
+
+  SimilaritySearchFunctionArn:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt SimilaritySearchFunction.Arn

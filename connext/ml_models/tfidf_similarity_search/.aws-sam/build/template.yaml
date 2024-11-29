@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Similarity Search Lambda Function with API Key Authentication
+Resources:
+  SimilaritySearchApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        ApiKeyRequired: true
+      Cors:
+        AllowMethods: '''POST'''
+        AllowHeaders: '''Content-Type,X-Api-Key'''
+        AllowOrigin: '''*'''
+  SimilaritySearchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      ImageUri: similarity-search:latest
+      Environment:
+        Variables:
+          BUCKET:
+            Ref: BUCKET
+          EMBEDDING_KEY: models/tfidf_components/tfidf_embedding.joblib
+          VECTORIZER_KEY: models/tfidf_components/tfidf_vectorizer.joblib
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: SimilaritySearchApi
+            Path: /search
+            Method: post
+            Auth:
+              ApiKeyRequired: true
+  SimilaritySearchApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn: SimilaritySearchApi
+    Properties:
+      Name: SimilaritySearchKey
+      Description: API Key for Similarity Search
+      Enabled: true
+      StageKeys:
+      - RestApiId:
+          Ref: SimilaritySearchApi
+        StageName: Prod
+  SimilaritySearchUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: SimilaritySearchUsagePlan
+      Description: Usage Plan for Similarity Search API
+      ApiStages:
+      - ApiId:
+          Ref: SimilaritySearchApi
+        Stage: Prod
+      Quota:
+        Limit: 100000
+        Period: MONTH
+      Throttle:
+        RateLimit: 10
+        BurstLimit: 20
+  SimilaritySearchUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId:
+        Ref: SimilaritySearchApiKey
+      KeyType: API_KEY
+      UsagePlanId:
+        Ref: SimilaritySearchUsagePlan
+Parameters:
+  BUCKET:
+    Type: String
+    Default: bombastic-mediocrity-connext
+    Description: Name of the S3 bucket containing the models
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value:
+      Fn::Sub: https://${SimilaritySearchApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/text_search/
+  ApiKeyId:
+    Description: API Key ID
+    Value:
+      Ref: SimilaritySearchApiKey
+  UsagePlanId:
+    Description: Usage Plan ID
+    Value:
+      Ref: SimilaritySearchUsagePlan
+  SimilaritySearchApi:
+    Description: API Gateway endpoint URL for Similarity Search function
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/text_search/
+  SimilaritySearchFunctionArn:
+    Description: Lambda Function ARN
+    Value:
+      Fn::GetAtt:
+      - SimilaritySearchFunction
+      - Arn

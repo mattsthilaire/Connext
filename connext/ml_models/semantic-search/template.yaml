@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  semantic-search
+
+  Sample SAM Template for semantic-search
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 8192
+
+    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
+    LoggingConfig:
+      LogFormat: JSON
+Resources:
+  SemanticSearchFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      PackageType: Image
+      ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/semantic-search:latest
+      Environment:
+        Variables:
+          BUCKET: !Ref BUCKET
+          EMBEDDING_KEY: models/semantic_embeddings/semantic_embedding.npy
+          MODEL_NAME: sentence-transformers/all-MiniLM-L6-v2
+      MemorySize: 8192
+      Timeout: 30
+      ImageConfig:
+        Command: ["app.lambda_handler"]
+      Events:
+        SemanticSearch:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /semantic-search
+            Method: post
+
+Parameters:
+  BUCKET:
+    Type: String
+    Default: bombastic-mediocrity-connext
+    Description: Name of the S3 bucket containing the models
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  SemanticSearchWorldApi:
+    Description: API Gateway endpoint URL for Prod stage for Semantic Search function
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/semantic-search/"
+  SemanticSearchFunction:
+    Description: Semantic Search Lambda Function ARN
+    Value: !GetAtt SemanticSearchFunction.Arn
+  SemanticSearchFunctionIamRole:
+    Description: Implicit IAM Role created for Semantic Search function
+    Value: !GetAtt SemanticSearchFunctionRole.Arn
