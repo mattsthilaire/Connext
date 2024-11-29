@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 from .storage import UserS3Storage
+from pgvector.django import VectorField
 import boto3
 
 def user_directory_path(instance, filename):
@@ -16,6 +17,7 @@ class Photo(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     likes = models.IntegerField(default=0)
     dislikes = models.IntegerField(default=0)
+    embedding = VectorField(dimensions=384)
 
     def __str__(self):
         return self.description

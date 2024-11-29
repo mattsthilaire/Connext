@@ -1,10 +1,11 @@
 import base64
+import json
 import requests
 import io
 import string
 
 from django.conf import settings
-from django.db.models import F, Q
+from django.db.models import Case, F, IntegerField, Q, When
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.shortcuts import get_object_or_404, render
@@ -85,7 +86,8 @@ def generate_caption(image_url):
     resp = requests.post(
         api_url,
         json={"input": {"image": encoded_string}},
-        headers={"Authorization": api_key},)
+        headers={"Authorization": api_key},
+        timeout=settings.TIMEOUT)
     
     if resp.status_code == 200:
         return resp.json()["output"]["caption"]
@@ -96,15 +98,99 @@ def search(request):
     query = request.GET.get("query")
     query_tokens = tokenize(query)
     
-    query_filters = Q()
-    
-    if query:
-        for token in query_tokens:
-            query_filters |= Q(description__icontains=token)
-        photos = Photo.objects.filter(query_filters).distinct()
-    else:
-        photos = Photo.objects.none()
+    method = "fusion"
+    if method == "tfidf":
+        resp = requests.post(
+            settings.TFIDF_TEXT_SEARCH_URL,
+            data=json.dumps({"query": query, "topk": settings.TOPK}),
+            timeout=settings.TIMEOUT
+        )
+
+        top_images = json.loads(resp.text)["top_ids"]
         
+        preserved_order = Case(
+            *[When(pk=pk, then=pos) for pos, pk in enumerate(top_images)],
+            output_field=IntegerField()
+            )
+        photos = Photo.objects.filter(pk__in=top_images).order_by(preserved_order)
+
+    elif method == "semantic":
+        resp = requests.post(
+            settings.SEMANTIC_EMBEDDING_URL,
+            headers={"Authorization": settings.RUNDPOD_API_KEY},
+            data=json.dumps({"input": {"text": query, "topk": settings.TOPK}}),
+            timeout=settings.TIMEOUT
+        )
+
+        embedding = json.loads(resp.text)["output"]["embedding"]
+
+        resp = requests.post(
+            settings.SEMANTIC_TEXT_SEARCH_URL,
+            data=json.dumps({"query": embedding, "topk": settings.TOPK}),
+            timeout=settings.TIMEOUT
+        )
+
+        top_images = json.loads(resp.text)["ordered_ids"]
+
+        preserved_order = Case(
+            *[When(pk=pk, then=pos) for pos, pk in enumerate(top_images)],
+            output_field=IntegerField()
+            )
+        photos = Photo.objects.filter(pk__in=top_images).order_by(preserved_order)
+
+    elif method == "fusion":
+        tfidf_resp = requests.post(
+            settings.TFIDF_TEXT_SEARCH_URL,
+            data=json.dumps({"query": query, "topk": settings.TOPK}),
+            timeout=settings.TIMEOUT
+        )
+
+        embedding_resp = requests.post(
+            settings.SEMANTIC_EMBEDDING_URL,
+            headers={"Authorization": settings.RUNDPOD_API_KEY},
+            data=json.dumps({"input": {"text": query, "topk": settings.TOPK}}),
+            timeout=settings.TIMEOUT
+        )
+
+        embedding = json.loads(embedding_resp.text)["output"]["embedding"]
+
+        semantic_resp = requests.post(
+            settings.SEMANTIC_TEXT_SEARCH_URL,
+            data=json.dumps({"query": embedding, "topk": settings.TOPK}),
+            timeout=settings.TIMEOUT
+        )
+
+        data = {"rankers": {
+            "tfidf": json.loads(tfidf_resp.text)["top_ids"],
+            "semantic": json.loads(semantic_resp.text)["ordered_ids"]
+            },
+            "topk": settings.TOPK
+        }
+
+        reranker_resp = requests.post(
+            settings.RERANKER_URL,
+            data=json.dumps(data),
+            timeout=settings.TIMEOUT
+        )
+
+        top_images = json.loads(reranker_resp.text)["ranked_idx"]
+        
+        preserved_order = Case(
+            *[When(pk=pk, then=pos) for pos, pk in enumerate(top_images)],
+            output_field=IntegerField()
+            )
+        photos = Photo.objects.filter(pk__in=top_images).order_by(preserved_order)
+    
+    else:
+        query_filters = Q()
+        
+        if query:
+            for token in query_tokens:
+                query_filters |= Q(description__icontains=token)
+            photos = Photo.objects.filter(query_filters).distinct()[:settings.TOPK]
+        else:
+            photos = Photo.objects.none()
+            
     context = {
         "photos": photos,
         "query": query,

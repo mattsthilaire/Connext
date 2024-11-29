@@ -129,9 +129,17 @@ AWS_S3_OBJECT_PARAMETERS = {
     "CacheControl": "max-age=86400",
 }
 
+# APIs
 RUNPOD_IMAGE_CAPTIONING_URL = os.environ.get("RUNPOD_IMAGE_CAPTIONING_URL")
+RUNPOD_SEMANTIC_EMBEDDING_URL = os.environ.get("SEMANTIC_EMBEDDING_URL")
 RUNDPOD_API_KEY = os.environ.get("RUNDPOD_API_KEY")
 
+TFIDF_TEXT_SEARCH_URL = os.environ.get("TFIDF_TEXT_SEARCH_URL")
+SEMANTIC_EMBEDDING_URL = os.environ.get("SEMANTIC_EMBEDDING_URL")
+SEMANTIC_TEXT_SEARCH_URL = os.environ.get("SEMANTIC_TEXT_SEARCH_URL")
+RERANKER_URL = os.environ.get("RERANKER_URL")
+TOPK = 1_000
+TIMEOUT = 30
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
